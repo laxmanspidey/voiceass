@@ -13,12 +13,15 @@ import speech_recognition as sr
 import pyttsx3  # For text-to-speech
 import time
 import threading  # For threading support
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 # Initialization
 wake_word = 'spidey'
-groq_client = Groq(api_key="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")
-genai.configure(api_key='AIzaSyCXZaIRYC10pgkZzJOHOhykhrzaZ1M-_vk')
-openai_client = OpenAI(api_key='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')
+groq_client = Groq(api_key="GROQ_API_KEY")
+genai.configure(api_key='genaiapikey')
+openai_client = OpenAI(api_key='openaikey')
 web_cam = cv2.VideoCapture(0)
 
 sys_msg = (

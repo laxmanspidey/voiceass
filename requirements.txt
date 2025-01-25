@@ -67,6 +67,7 @@ pyperclip==1.9.0
 pypiwin32==223
 pyreadline3==3.5.4
 python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
 pyttsx3==2.98
 pytz==2024.2
 pywin32==308
