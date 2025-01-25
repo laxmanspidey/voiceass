@@ -1,0 +1,11 @@
+streamlit
+groq
+Pillow
+opencv-python
+pyperclip
+google-generativeai
+openai
+pyaudio
+faster-whisper
+SpeechRecognition
+pyttsx3
