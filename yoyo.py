@@ -1,28 +1,23 @@
 import re
 import streamlit as st
 from groq import Groq
-from PIL import ImageGrab, Image
-import cv2
+from PIL import Image
 import pyperclip
 import google.generativeai as genai
 from openai import OpenAI
-import pyaudio
 from faster_whisper import WhisperModel
 import os
-import speech_recognition as sr
-import pyttsx3  # For text-to-speech
 import time
-import threading  # For threading support
 from dotenv import load_dotenv
-import os
 
+# Load environment variables
 load_dotenv()
+
 # Initialization
 wake_word = 'spidey'
-groq_client = Groq(api_key="GROQ_API_KEY")
-genai.configure(api_key='genaiapikey')
-openai_client = OpenAI(api_key='openaikey')
-web_cam = cv2.VideoCapture(0)
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+genai.configure(api_key=os.getenv("GENAI_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 sys_msg = (
     'You are a multi-modal AI voice assistant. Your user may or may not have attached a photo for context '
@@ -64,9 +59,6 @@ whisper_model = WhisperModel(
     num_workers=num_cores // 2
 )
 
-# Initialize Text to Speech engine
-engine = pyttsx3.init()
-
 # Functions
 def groq_prompt(prompt, img_context):
     if img_context:
@@ -77,21 +69,6 @@ def groq_prompt(prompt, img_context):
     convo.append(response)
 
     return response.content
-
-def take_screenshot():
-    path = 'screenshot.jpg'
-    screenshot = ImageGrab.grab()
-    rgb_screenshot = screenshot.convert('RGB')
-    rgb_screenshot.save(path, quality=15)
-    return path
-
-def web_cam_capture():
-    if not web_cam.isOpened():
-        return 'Error: Camera did not open successfully'
-    path = 'webcam.jpg'
-    ret, frame = web_cam.read()
-    cv2.imwrite(path, frame)
-    return path
 
 def get_clipboard_text():
     clipboard_content = pyperclip.paste()
@@ -112,78 +89,27 @@ def vision_prompt(prompt, photo_path):
     response = model.generate_content([prompt, img])
     return response.text
 
-def listen_to_voice_command():
-    recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-
-    with mic as source:
-        print("Listening for voice command...")
-        recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source)
-
-    try:
-        command = recognizer.recognize_google(audio)
-        print(f"Voice Command: {command}")
-        return command.lower()  # Convert command to lowercase for easy comparison
-    except sr.UnknownValueError:
-        print("Sorry, I did not understand that.")
-        return None
-    except sr.RequestError:
-        print("Sorry, there was an issue with the speech recognition service.")
-        return None
-
-def speak_response(response):
-    def speak():
-        engine.say(response)
-        engine.runAndWait()
-
-    # Run speech synthesis in a separate thread to avoid blocking the main loop
-    threading.Thread(target=speak).start()
-
-def handle_voice_commands(command):
-    if 'screen' in command or 'screenshot' in command:
-        screenshot_path = take_screenshot()
-        st.image(screenshot_path, caption="Screenshot Captured")
-
-        # Automatically process the screenshot and generate a response
-        img_context = vision_prompt(command, screenshot_path)
+def handle_voice_commands(command, uploaded_image=None):
+    if uploaded_image:
+        img_context = vision_prompt(command, uploaded_image)
         response = groq_prompt(command, img_context)
-        st.text_area("Assistant Response", response)
-        speak_response(response)
-    elif 'webcam' in command or 'camera' in command:
-        webcam_path = web_cam_capture()
-        if webcam_path.startswith('Error'):
-            st.error(webcam_path)
-        else:
-            st.image(webcam_path, caption="Webcam Capture")
-
-            # Automatically process the webcam image and generate a response
-            img_context = vision_prompt(command, webcam_path)
-            response = groq_prompt(command, img_context)
-            st.text_area("Assistant Response", response)
-            speak_response(response)
     else:
-        # Default response for general queries or conversations
-        response = groq_prompt(command, None)  # Use 'None' as there's no image context
-        st.text_area("Assistant Response", response)
-        speak_response(response)
+        response = groq_prompt(command, None)
+
+    st.text_area("Assistant Response", response)
 
 # Streamlit Interface
 st.title("Spidey AI Assistant")
 
-# Placeholder to dynamically update the status
-status_placeholder = st.empty()
+# File uploader for images
+uploaded_image = st.file_uploader("Upload an image for context", type=["jpg", "jpeg", "png"])
 
-# Function to continuously listen for commands
-def continuous_listening():
-    while True:
-        status_placeholder.text("Listening for voice command...")
-        voice_command = listen_to_voice_command()
-        if voice_command:
-            status_placeholder.text(f"Command received: {voice_command}")
-            handle_voice_commands(voice_command)
-        time.sleep(1)  # Add a small delay to avoid excessive resource usage
+# Text input for voice command (simulated)
+voice_command = st.text_input("Enter your voice command (simulated):")
 
-# Automatically start continuous listening in the background
-if __name__ == "__main__":
-    continuous_listening()
+# Handle voice command
+if voice_command:
+    if uploaded_image:
+        handle_voice_commands(voice_command, uploaded_image)
+    else:
+        handle_voice_commands(voice_command)
